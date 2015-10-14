@@ -11,6 +11,28 @@ import (
 	//	"time"
 )
 
+func Split(s, charset string) []string {
+	res := []string{}
+	tokenStart := -1
+
+	for i, r := range s {
+		if strings.ContainsRune(charset, r) {
+			if tokenStart != -1 {
+				res = append(res, s[tokenStart:i])
+				tokenStart = -1
+			}
+		} else {
+			if tokenStart == -1 {
+				tokenStart = i
+			}
+		}
+	}
+	if tokenStart != -1 {
+		res = append(res, s[tokenStart:])
+	}
+	return res
+}
+
 // execs a process with the supplied GOPATH
 func runproc(proc, gopath string, args []string) error {
 
@@ -31,18 +53,22 @@ func runproc(proc, gopath string, args []string) error {
 }
 
 func getGOPATH(cwd string) (gopath string, err error) {
-	cderr := os.Chdir("src")
-	cwd, err := os.Getwd()
 
-	if err != nil {
-		return err
+	cwdDirs := Split(cwd, string(os.PathSeparator))
+
+	for i := len(cwdDirs) - 1; i > -1; i-- {
+		fmt.Println(i, cwdDirs[i])
+		if cwdDirs[i] == "src" {
+			for n := 0; n < i; n++ {
+				gopath = filepath.Join(cwdDirs...)
+				fmt.Println(gopath)
+				return
+			}
+		}
 	}
 
-	cwdDirs := filepath.SplitList(cwd)
-
-	os.PathSeparator
-	errors.New("src directory not found in current path")
-
+	fmt.Println(cwdDirs)
+	err = errors.New("src dirctory no found")
 	return
 }
 
