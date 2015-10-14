@@ -45,7 +45,7 @@ func getGOPATH(cwd string) (gopath string, err error) {
 		cwd = cwd[:sepIdx]
 	}
 
-	err = errors.New("src dirctory no found")
+	err = errors.New("Error: src directory not found")
 	return
 }
 
@@ -57,27 +57,16 @@ func exitOnError(err error) {
 }
 
 func main() {
-
-	orgcwd, err := os.Getwd()
+	path, err := os.Getwd()
 	exitOnError(err)
 
-	cwd := orgcwd
-
-	err = os.Chdir("src")
-	if err == nil {
-		cwd, err = os.Getwd()
-		exitOnError(err)
-
-		err = os.Chdir(orgcwd)
-		exitOnError(err)
+	finfo, err := os.Stat("src")
+	if err == nil && finfo.IsDir() {
+		path = filepath.Join(path, "src")
 	}
 
-	fmt.Println(cwd)
-	gopath, err := getGOPATH(cwd)
+	gopath, err := getGOPATH(path)
 	exitOnError(err)
-
-	fmt.Println(gopath)
-	fmt.Println(os.Args)
 
 	err = runproc("go", gopath, os.Args[1:])
 	exitOnError(err)
