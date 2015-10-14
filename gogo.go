@@ -3,35 +3,11 @@ package main
 import (
 	"errors"
 	"fmt"
-	//	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
-	//	"time"
 )
-
-func Split(s, charset string) []string {
-	res := []string{}
-	tokenStart := -1
-
-	for i, r := range s {
-		if strings.ContainsRune(charset, r) {
-			if tokenStart != -1 {
-				res = append(res, s[tokenStart:i])
-				tokenStart = -1
-			}
-		} else {
-			if tokenStart == -1 {
-				tokenStart = i
-			}
-		}
-	}
-	if tokenStart != -1 {
-		res = append(res, s[tokenStart:])
-	}
-	return res
-}
 
 // execs a process with the supplied GOPATH
 func runproc(proc, gopath string, args []string) error {
@@ -54,28 +30,55 @@ func runproc(proc, gopath string, args []string) error {
 
 func getGOPATH(cwd string) (gopath string, err error) {
 
-	cwdDirs := Split(cwd, string(os.PathSeparator))
+	src := filepath.Join(string(os.PathSeparator), "src")
 
-	for i := len(cwdDirs) - 1; i > -1; i-- {
-		fmt.Println(i, cwdDirs[i])
-		if cwdDirs[i] == "src" {
-			for n := 0; n < i; n++ {
-				gopath = filepath.Join(cwdDirs...)
-				fmt.Println(gopath)
-				return
-			}
+	for {
+		if strings.HasSuffix(cwd, src) {
+			gopath = cwd[:len(cwd)-len(src)]
+			return
 		}
+
+		sepIdx := strings.LastIndex(cwd, string(os.PathSeparator))
+		if sepIdx == -1 {
+			break
+		}
+		cwd = cwd[:sepIdx]
 	}
 
-	fmt.Println(cwdDirs)
 	err = errors.New("src dirctory no found")
 	return
 }
 
+func exitOnError(err error) {
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+}
+
 func main() {
-	fmt.Println(os.Getwd())
 
-	os.Chdir("src")
-	fmt.Println(os.Getwd())
+	orgcwd, err := os.Getwd()
+	exitOnError(err)
 
+	cwd := orgcwd
+
+	err = os.Chdir("src")
+	if err == nil {
+		cwd, err = os.Getwd()
+		exitOnError(err)
+
+		err = os.Chdir(orgcwd)
+		exitOnError(err)
+	}
+
+	fmt.Println(cwd)
+	gopath, err := getGOPATH(cwd)
+	exitOnError(err)
+
+	fmt.Println(gopath)
+	fmt.Println(os.Args)
+
+	err = runproc("go", gopath, os.Args[1:])
+	exitOnError(err)
 }
